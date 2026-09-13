@@ -7,13 +7,14 @@ import type { Analysis, MarketInputs } from '../../shared/types';
 import { priceStatusLabel, useMarket } from '../market';
 import { XauUsdChart } from '../components/XauUsdChart';
 import { useCentralData } from '../data';
+import { runAnalysis } from '../../server/analysis/engine';
 
 export function Dashboard(){
   const [inputs,setInputs]=useState<MarketInputs>(()=>JSON.parse(localStorage.getItem('gold-inputs')||JSON.stringify(DEFAULT_INPUTS)));
-  const [result,setResult]=useState<Analysis|null>(null); const [running,setRunning]=useState(false); const [saved,setSaved]=useState(false);
+  const [result,setResult]=useState<Analysis|null>(()=>runAnalysis(DEFAULT_INPUTS)); const [running,setRunning]=useState(false); const [saved,setSaved]=useState(false);
   const {price,snapshot}=useMarket();
   const {data}=useCentralData();const dxy=data?.dxy;const analysisDxy=dxy?.value??inputs.dxy;
-  const run=async()=>{setRunning(true);setSaved(false);localStorage.setItem('gold-inputs',JSON.stringify(inputs));try{setResult(await analyze({...inputs,dxy:analysisDxy,xauusd:price?.mid??inputs.xauusd,technicalStructure:snapshot?.levels?.structure==='RANGE'?'NEUTRAL':snapshot?.levels?.structure??inputs.technicalStructure}))}finally{setTimeout(()=>setRunning(false),450)}};
+  const run=async()=>{setRunning(true);setSaved(false);localStorage.setItem('gold-inputs',JSON.stringify(inputs));try{setResult(await analyze({...inputs,dxy:analysisDxy,xauusd:price?.mid??inputs.xauusd,technicalStructure:snapshot?.levels?.structure==='RANGE'?'NEUTRAL':snapshot?.levels?.structure??inputs.technicalStructure}).catch(()=>runAnalysis({...inputs,dxy:analysisDxy,xauusd:price?.mid??inputs.xauusd,technicalStructure:snapshot?.levels?.structure==='RANGE'?'NEUTRAL':snapshot?.levels?.structure??inputs.technicalStructure})))}finally{setTimeout(()=>setRunning(false),450)}};
   useEffect(()=>{if(data)void run()},[Boolean(data)]);
   const save=async()=>{if(!result)return;await saveJournal({dateTime:result.createdAt,instrument:'XAUUSD',direction:result.bias.replace('_',' '),marketConditions:`DXY ${inputs.dxy}, US10Y ${inputs.us10y}%, ${inputs.technicalStructure.toLowerCase()} structure`,thesis:result.primaryScenario,entry:result.trade?.entryLow,stopLoss:result.trade?.stop,tp1:result.trade?.tp1,tp2:result.trade?.tp2,tp3:result.trade?.tp3,rr:result.trade?.rr,positionSize:'',conviction:result.conviction>=70?'High':result.conviction>=45?'Medium':'Low',invalidation:result.invalidation,result:'Open'});setSaved(true)};
   return <div className="page"><PageHead eyebrow="GOLD INTEL / DEMO ACCOUNT" title="Gold Intelligence" sub="An explainable, evidence-weighted view of the XAUUSD environment." actions={<div className="head-actions"><span className="mockbadge"><i/>SIMULATED DATA</span><button className="primary" onClick={run}><Play size={15}/>{running?'ANALYZING…':'RUN GOLD INTEL'}</button></div>}/>
