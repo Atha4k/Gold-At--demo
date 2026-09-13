@@ -1,0 +1,12 @@
+import type { Analysis, JournalEntry, MarketInputs, MarketLevels, MarketMode, MarketSnapshot, MarketTimeframe, NormalizedCandle } from '../shared/types';
+const json = async <T,>(url: string, init?: RequestInit): Promise<T> => { const r = await fetch(url, init); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+export const analyze = (inputs: MarketInputs) => json<Analysis>('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inputs) });
+export const fetchJournal = () => json<JournalEntry[]>('/api/journal');
+export const saveJournal = (entry: JournalEntry) => json<JournalEntry>('/api/journal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) });
+export const fetchMarketSnapshot=()=>json<MarketSnapshot>('/api/market/snapshot');
+export const refreshMarketPrice=()=>json<{price:MarketSnapshot['price'];status:MarketSnapshot['status']}>('/api/market/refresh',{method:'POST'});
+export const fetchMarketCandles=(timeframe:MarketTimeframe,count=500,before?:string)=>json<NormalizedCandle[]>(`/api/market/candles?timeframe=${timeframe}&count=${count}${before?`&before=${encodeURIComponent(before)}`:''}`);
+export const fetchMarketLevels=(timeframe:MarketTimeframe)=>json<MarketLevels>(`/api/market/levels?timeframe=${timeframe}`);
+export const fetchDxyCandles=(timeframe:MarketTimeframe,count=500,before?:string)=>json<NormalizedCandle[]>(`/api/macro/dxy/candles?timeframe=${timeframe}&count=${count}${before?`&before=${encodeURIComponent(before)}`:''}`);
+export const setMarketMode=(mode:MarketMode)=>json<{mode:MarketMode;status:string;configured:boolean}>('/api/market/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
+export const fetchMarketDebug=()=>json<{streamStatus:string;instrument:string;latest:unknown;webSocketClients:number;mode:MarketMode;configured:boolean}>('/api/market/debug');
